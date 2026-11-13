@@ -77,6 +77,8 @@ export default function Home() {
   const [selected,setSelected] = useState(null);
   const [detail,setDetail] = useState(null);
   const [versions,setVersions] = useState([]);
+  const [downloadGameVersion,setDownloadGameVersion] = useState("");
+  const [downloadLoader,setDownloadLoader] = useState("");
   const [detailTab,setDetailTab] = useState("description");
   const [galleryIndex,setGalleryIndex] = useState(0);
   const [serviceSelected,setServiceSelected] = useState(null);
@@ -123,7 +125,7 @@ export default function Home() {
 
   const filteredServices=useMemo(()=>SERVICE_ITEMS.filter(item=>(type==="all"||type==="services"||type==="server"||type==="development")), [type]);
   const openProject=async project=>{
-    setSelected(project);setDetail(null);setVersions([]);setDetailTab("description");setGalleryIndex(0);
+    setSelected(project);setDetail(null);setVersions([]);setDetailTab("description");setGalleryIndex(0);setDownloadGameVersion("");setDownloadLoader("");
     try{
       const [a,b]=await Promise.all([fetch("/api/modrinth/project/"+project.project_id),fetch("/api/modrinth/project/"+project.project_id+"/versions")]);
       const detailData=await a.json();const versionData=await b.json();
@@ -250,7 +252,15 @@ export default function Home() {
       <div className="modal-tabs"><button className={detailTab==="description"?"active":""} onClick={()=>setDetailTab("description")}>Description</button><button className={detailTab==="versions"?"active":""} onClick={()=>setDetailTab("versions")}>Versions ({versions.length})</button><button className={detailTab==="gallery"?"active":""} onClick={()=>setDetailTab("gallery")}>Gallery ({detail?.project?.gallery?.length||selected.gallery?.length||0})</button></div>
       <div className="modal-body">
         {detailTab==="description"&&<div className="detail-columns"><div className="detail-description"><h3>About this project</h3><ReactMarkdown remarkPlugins={[remarkGfm]} components={{img:({src,alt})=><img src={src||""} alt={alt||"Project media"} className="description-media" loading="lazy"/>,a:({href,children})=><a href={href} target="_blank" rel="noreferrer">{children}</a>}}>{detail?.project?.body||selected.description}</ReactMarkdown><h3>Compatibility</h3><div className="detail-tags">{(detail?.project?.game_versions||selected.versions||[]).slice(0,12).map(v=><span key={v}>{v}</span>)}</div><h3>Categories</h3><div className="detail-tags">{(detail?.project?.categories||selected.categories||[]).slice(0,12).map(v=><span key={v}>{v}</span>)}</div></div><aside className="detail-sidebar"><b>Project details</b><span>Type · {detail?.project?.project_type||selected.project_type}</span><span>License · {detail?.project?.license?.id||selected.license||"See project page"}</span><span>Updated · {dateLabel(detail?.project?.updated||selected.date_modified)}</span><span>Client · {detail?.project?.client_side||"Unknown"}</span><span>Server · {detail?.project?.server_side||"Unknown"}</span><a href={"https://modrinth.com/"+(detail?.project?.project_type||"mod")+"/"+selected.slug} target="_blank" rel="noreferrer">Original Modrinth page ↗</a>{detail?.team?.length>0&&<div className="detail-creators"><b>Creators</b>{detail.team.slice(0,5).map((member,i)=>{const user=member.user||{};return <div className="creator-member" key={user.id||i}>{user.avatar_url?<img src={user.avatar_url} alt=""/>:<span className="creator-avatar-fallback">{(user.username||"C").slice(0,1).toUpperCase()}</span>}<span>{user.username||"Creator"}<small>{member.role||"Member"}</small></span></div>})}</div>}</aside></div>}
-        {detailTab==="versions"&&<div className="version-list">{versions.length===0?<p>Loading versions or no versions available.</p>:versions.slice(0,12).map(v=><div className="version-row" key={v.id}><div><b>{v.name||v.version_number}</b><small>{(v.game_versions||[]).join(", ")} · {(v.loaders||[]).join(", ")} · {dateLabel(v.date_published)}</small></div><a href={v.files?.find(f=>f.primary)?.url||v.files?.[0]?.url||"#"} target="_blank" rel="noreferrer">Download ↗</a></div>)}</div>}
+        {detailTab==="versions"&&<div className="version-download-panel">
+          {versions.length===0?<p>Loading versions or no versions available.</p>:<>
+            <div className="version-selectors">
+              <label>Minecraft version<select value={downloadGameVersion} onChange={e=>{setDownloadGameVersion(e.target.value);setDownloadLoader("");}}><option value="">Choose game version</option>{[...new Set(versions.flatMap(v=>v.game_versions||[]))].sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).map(v=><option key={v} value={v}>{v}</option>)}</select></label>
+              <label>Loader / platform<select value={downloadLoader} onChange={e=>setDownloadLoader(e.target.value)} disabled={!downloadGameVersion}><option value="">Choose loader</option>{[...new Set(versions.filter(v=>!downloadGameVersion||v.game_versions?.includes(downloadGameVersion)).flatMap(v=>v.loaders||[]))].sort().map(v=><option key={v} value={v}>{v[0].toUpperCase()+v.slice(1)}</option>)}</select></label>
+            </div>
+            {!downloadGameVersion||!downloadLoader?<p className="download-hint">Select a Minecraft version and loader to see matching releases.</p>:<div className="version-list">{versions.filter(v=>v.game_versions?.includes(downloadGameVersion)&&v.loaders?.includes(downloadLoader)).slice(0,15).map(v=><div className="version-row" key={v.id}><div><b>{v.name||v.version_number}</b><small>{(v.game_versions||[]).join(", ")} · {(v.loaders||[]).join(", ")} · {dateLabel(v.date_published)}</small></div><a href={v.files?.find(f=>f.primary)?.url||v.files?.[0]?.url||"#"} target="_blank" rel="noreferrer">Download ↗</a></div>)}{versions.filter(v=>v.game_versions?.includes(downloadGameVersion)&&v.loaders?.includes(downloadLoader)).length===0&&<p className="download-hint">No releases match this exact version and loader combination.</p>}</div>}
+          </>}
+        </div>}
         {detailTab==="gallery"&&<div className="detail-gallery">{(detail?.project?.gallery||selected.gallery||[]).length===0?<p>No screenshots have been added by this creator.</p>:(detail?.project?.gallery||selected.gallery||[]).map((item,i)=><button key={i} onClick={()=>setShowMedia(typeof item==="string"?item:item.url)}><img src={typeof item==="string"?item:item.url} alt={"Project screenshot "+(i+1)}/></button>)}</div>}
       </div>
       <div className="modal-footer"><span>Community project · Free download</span><a className="rainbow-button" href={"https://modrinth.com/"+(detail?.project?.project_type||"mod")+"/"+selected.slug} target="_blank" rel="noreferrer">Open project ↗</a></div>
