@@ -1,6 +1,16 @@
 # Arctic Forge — Minecraft Marketplace
 
-A responsive Next.js storefront concept for Minecraft server plans, ready-made servers, mods, modpacks, plugins, texture packs, shaders, maps and developer services.
+A Next.js marketplace for Minecraft mods, modpacks, plugins, texture packs, shaders, data packs, server services and creator-made products.
+
+## Features
+- Live free-project discovery powered by the public Modrinth API
+- Search, sorting, Minecraft version and loader filters
+- Free / paid marketplace filter
+- Project detail previews with icons, screenshot galleries, compatibility and version downloads
+- Paid server and development service catalogue
+- Creator studio with free/paid price setting and image/GIF previews
+- Local creator profile and draft previews
+- Responsive Arctic Luxury / Rainbow visual system
 
 ## Run locally
 ```bash
@@ -8,16 +18,15 @@ npm install
 npm run dev
 ```
 
-## Hero background video
-Place your own licensed Minecraft gameplay footage at `public/minecraft-hero.mp4` (MP4/H.264 recommended). An optional poster image can be placed at `public/hero-poster.jpg`. The hero has a CSS fallback if the video is unavailable.
+## Important current limitations
+- Creator Studio drafts and profile previews are saved in the current browser only.
+- Authentication, public creator accounts, permanent file storage, public project publishing, orders, checkout, payment processing, refunds and creator payouts are not connected yet.
+- The creator studio accepts image previews (PNG, JPG, WEBP, GIF), but it does not yet upload project archives or publish them to a server.
+- Paid service cards are quote requests; prices and inventory must be configured before real sales.
+- Free community project metadata and download links are served by Modrinth. Original project creators retain ownership; links open the original Modrinth project and downloads.
 
-## Current scope
-- Responsive storefront and category filters
-- Product search and quick-view dialogs
-- Demo shopping bag state
-- Service showcase and support links
+## Hero media
+Place licensed Minecraft gameplay footage at `public/minecraft-hero.mp4` to use a custom video hero. The current homepage uses an animated visual fallback.
 
-## Before accepting payments
-Connect a real checkout provider, order database, customer authentication, file delivery/storage, tax and refund workflows. Product names and prices are demo content and should be replaced with your actual offers. Replace the placeholder support email and brand name as needed.
-
-Independent fan-made marketplace concept. Not affiliated with or endorsed by Mojang or Microsoft.
+## Attribution
+This is an independent marketplace project and is not affiliated with Modrinth, Mojang or Microsoft.
