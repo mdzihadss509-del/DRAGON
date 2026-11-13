@@ -27,7 +27,7 @@ setAvailableVersions(versions.filter(v=>v.game_versions?.length));
 finally{setDownloadLoading(false);}
 }else{setDownloadLoading(false);}
 };
-const gameVersions=[...new Set(availableVersions.flatMap(v=>v.game_versions||[]))].sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
+const gameVersions=availableVersions.length?[...new Set(availableVersions.flatMap(v=>v.game_versions||[]))].sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})):["26.1","1.21.11","1.21.10","1.21.9","1.21.8","1.21.7","1.21.6","1.21.5","1.21.4","1.21.1","1.20.6","1.20.4","1.20.1"];
 const usesModLoader=downloadProduct?.type==="Mods & Modpacks";
 const loaders=usesModLoader?[...new Set(availableVersions.filter(v=>!gameVersion||v.game_versions?.includes(gameVersion)).flatMap(v=>v.loaders||[]))].sort():
 downloadProduct?.type==="Plugins"?["Paper","Spigot","Purpur","Velocity","BungeeCord","Fabric","Forge","NeoForge","Vanilla"]:
