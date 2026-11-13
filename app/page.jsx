@@ -87,6 +87,7 @@ export default function Home() {
   const [productCurrency,setProductCurrency] = useState("BDT");
   const [productDescription,setProductDescription] = useState("");
   const [productIcon,setProductIcon] = useState("");
+  const [productCover,setProductCover] = useState("");
   const [productGallery,setProductGallery] = useState([]);
   const [profileName,setProfileName] = useState("Arctic Forge");
   const [profileBio,setProfileBio] = useState("Minecraft creators building tools, mods, servers and experiences for the community.");
@@ -138,10 +139,10 @@ export default function Home() {
   };
   const saveDraft=()=>{
     if(!productName.trim()){alert("Enter a product name first.");return;}
-    const draft={id:Date.now(),title:productName.trim(),type:productType,priceType:productPriceType,price:productPrice,currency:productCurrency,description:productDescription,icon:productIcon,gallery:productGallery,createdAt:new Date().toISOString()};
+    const draft={id:Date.now(),title:productName.trim(),type:productType,priceType:productPriceType,price:productPrice,currency:productCurrency,description:productDescription,icon:productIcon,cover:productCover,gallery:productGallery,createdAt:new Date().toISOString()};
     const next=[draft,...drafts];setDrafts(next);
     try{localStorage.setItem("arcticforge-drafts",JSON.stringify(next));}catch{alert("Draft is too large for local browser storage. Try fewer or smaller images.");}
-    setProductName("");setProductPrice("");setProductDescription("");setProductIcon("");setProductGallery([]);
+    setProductName("");setProductPrice("");setProductDescription("");setProductIcon("");setProductCover("");setProductGallery([]);
   };
   const saveProfile=()=>{
     const profile={name:profileName,bio:profileBio,avatar:profileAvatar,banner:profileBanner};
@@ -227,13 +228,13 @@ export default function Home() {
         <div className="studio-divider"/>
         <div className="studio-section-title"><span>03</span><div><b>Images & media</b><small>PNG, JPG, WEBP and GIF supported. Add screenshots so buyers can preview first.</small></div></div>
         <label className="upload-zone"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>addMedia(e.target.files?.[0],setProductIcon)}/><span className="upload-symbol">＋</span><b>Upload project icon</b><small>Square PNG, JPG, WEBP or GIF · max 3 MB</small></label>
-        <label className="upload-zone"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>addMedia(e.target.files?.[0],setProfileBanner)}/><span className="upload-symbol">▧</span><b>Choose a cover image</b><small>Wide image for your listing</small></label>
+        <label className="upload-zone"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={e=>addMedia(e.target.files?.[0],setProductCover)}/><span className="upload-symbol">▧</span><b>Choose a cover image</b><small>Wide image for your listing</small></label>
         <label className="upload-zone"><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple onChange={e=>addGallery(e.target.files)}/><span className="upload-symbol">▦</span><b>Add gallery screenshots / GIFs</b><small>Up to 8 images · 3 MB each</small></label>
         {productGallery.length>0&&<div className="upload-previews">{productGallery.map((src,i)=><button type="button" key={i} onClick={()=>setShowMedia(src)}><img src={src} alt={"Gallery preview "+(i+1)}/><span>↗</span></button>)}</div>}
         <button className="rainbow-button save-draft" type="submit">Save local draft ↗</button>
         <p className="local-warning">This is a local preview studio right now. Drafts are stored only in this browser; account login, permanent file storage, publishing and payments are not connected yet.</p>
       </form>
-      <aside className="studio-preview"><div className="preview-top"><span>LIVE PREVIEW</span><span className="preview-dot">● DRAFT</span></div><div className="preview-card"><div className="preview-cover">{productIcon?<img src={productIcon} alt="Project icon preview"/>:<span>✦</span>}</div><div className="preview-content"><span className={productPriceType==="free"?"free-pill":"paid-pill"}>{productPriceType==="free"?"FREE":"PAID"}</span><h3>{productName||"Your project name"}</h3><p>{productDescription||"Your project description will appear here, helping players understand what they can expect."}</p><div className="preview-price">{productPriceType==="free"?"Free download":productPrice?productCurrency+" "+productPrice:"Set your price"}</div></div>{productGallery.length>0&&<div className="preview-gallery">{productGallery.slice(0,4).map((src,i)=><img key={i} src={src} alt={"Preview "+(i+1)} onClick={()=>setShowMedia(src)}/>)}</div>}</div></aside></div>
+      <aside className="studio-preview"><div className="preview-top"><span>LIVE PREVIEW</span><span className="preview-dot">● DRAFT</span></div><div className="preview-card"><div className="preview-cover">{productCover?<img src={productCover} alt="Project cover preview"/>:<span>✦</span>}</div><div className="preview-content"><span className={productPriceType==="free"?"free-pill":"paid-pill"}>{productPriceType==="free"?"FREE":"PAID"}</span><div className="preview-title-row">{productIcon?<img className="preview-icon" src={productIcon} alt="Project icon"/>:null}<h3>{productName||"Your project name"}</h3></div><p>{productDescription||"Your project description will appear here, helping players understand what they can expect."}</p><div className="preview-price">{productPriceType==="free"?"Free download":productPrice?productCurrency+" "+productPrice:"Set your price"}</div></div>{productGallery.length>0&&<div className="preview-gallery">{productGallery.slice(0,4).map((src,i)=><img key={i} src={src} alt={"Preview "+(i+1)} onClick={()=>setShowMedia(src)}/>)}</div>}</div></aside></div>
       <div className="saved-drafts"><div className="section-kicker">YOUR LOCAL DRAFTS</div><h2>Saved listings <span>{drafts.length}</span></h2>{drafts.length===0?<p>No drafts yet. Your saved previews will appear here.</p>:<div className="draft-list">{drafts.map(d=><div className="draft-row" key={d.id}><div className="draft-mini">{d.icon?<img src={d.icon} alt=""/>:"✦"}</div><div><b>{d.title}</b><small>{d.type} · {d.priceType==="free"?"Free":d.currency+" "+d.price}</small></div><button onClick={()=>removeDraft(d.id)}>Delete</button></div>)}</div>}</div>
     </section>}
 
