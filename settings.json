@@ -6,7 +6,7 @@
     "type": "offline"
   },
   "server": {
-    "ip": "b2b.mcsh.io",
+    "ip": "bfh.mcsh.io",
     "port": 25565,
     "version": "1.20.1",
     "try-creative": false
