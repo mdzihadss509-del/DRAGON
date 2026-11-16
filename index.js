@@ -1181,6 +1181,7 @@ function recoverNetworkConnection(error, source) {
 
   clearBotTimeouts();
   clearAllIntervals();
+  isReconnecting = false;
   disposeCurrentBot("Network recovery");
 
   // Allow the failed socket to finish closing before opening a new connection.
@@ -1444,6 +1445,11 @@ function scheduleReconnect() {
 
   if (!botRunning) {
     addLog("[Bot] Reconnect suppressed because bot is stopped.");
+    return;
+  }
+
+  if (networkRecoveryPending) {
+    addLog("[Bot] Reconnect held until failed socket cleanup completes.");
     return;
   }
 
