@@ -979,6 +979,8 @@ let botRunning = true;
 app.post("/start", (req, res) => {
   if (botRunning) return res.json({ success: false, msg: "Already running" });
 
+  clearBotTimeouts();
+  isReconnecting = false;
   botRunning = true;
   createBot();
   addLog("[Control] Bot started");
@@ -990,10 +992,16 @@ app.post("/stop", (req, res) => {
   if (!botRunning) return res.json({ success: false, msg: "Already stopped" });
 
   botRunning = false;
+  clearBotTimeouts();
+  isReconnecting = false;
 
   if (bot) {
-    bot.end();
+    const oldBot = bot;
     bot = null;
+    try {
+      oldBot.removeAllListeners();
+      oldBot.end();
+    } catch (_) {}
   }
 
   clearAllIntervals();
@@ -1186,6 +1194,11 @@ function getReconnectDelay() {
 }
 
 function createBot() {
+  if (!botRunning) {
+    addLog("[Bot] Start suppressed because bot is stopped.");
+    return;
+  }
+
   if (isReconnecting) {
     addLog("[Bot] Already reconnecting, skipping...");
     return;
@@ -1370,6 +1383,11 @@ function createBot() {
 
 function scheduleReconnect() {
   clearBotTimeouts();
+
+  if (!botRunning) {
+    addLog("[Bot] Reconnect suppressed because bot is stopped.");
+    return;
+  }
 
   // FIX: don't stack reconnect if already waiting
   if (isReconnecting) {
