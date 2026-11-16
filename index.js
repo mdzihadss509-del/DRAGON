@@ -2,7 +2,7 @@
 
 const { addLog, getLogs } = require("./logger");
 const mineflayer = require("mineflayer");
-const minecraftData = require("@wp2508/minecraft-data");
+const minecraftData = require("minecraft-data");
 const { Movements, pathfinder, goals } = require("mineflayer-pathfinder");
 const { GoalBlock } = goals;
 const config = require("./settings.json");
