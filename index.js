@@ -1144,6 +1144,53 @@ let activeIntervals = [];
 let reconnectTimeoutId = null;
 let connectionTimeoutId = null;
 let isReconnecting = false;
+let networkRecoveryPending = false;
+
+function disposeCurrentBot(reason) {
+  const oldBot = bot;
+  bot = null;
+  botState.connected = false;
+
+  if (!oldBot) return;
+
+  try {
+    oldBot.removeAllListeners();
+  } catch (_) {}
+
+  try {
+    const client = oldBot._client;
+    const socket = client && client.socket;
+    if (socket && !socket.destroyed) {
+      socket.destroy();
+    } else if (client && typeof client.end === "function") {
+      client.end();
+    } else if (typeof oldBot.end === "function") {
+      oldBot.end();
+    }
+  } catch (err) {
+    addLog(`[Cleanup] ${reason || "Bot"} disposal error: ${err.message}`);
+  }
+}
+
+function recoverNetworkConnection(error, source) {
+  if (!botRunning || networkRecoveryPending) return;
+
+  networkRecoveryPending = true;
+  const message = error && error.message ? error.message : String(error || "Socket closed");
+  addLog(`[Network] ${source}: ${message} — disposing stale connection`);
+
+  clearBotTimeouts();
+  clearAllIntervals();
+  disposeCurrentBot("Network recovery");
+
+  // Allow the failed socket to finish closing before opening a new connection.
+  reconnectTimeoutId = setTimeout(() => {
+    reconnectTimeoutId = null;
+    networkRecoveryPending = false;
+    isReconnecting = false;
+    scheduleReconnect();
+  }, 3000);
+}
 
 function clearBotTimeouts() {
   if (reconnectTimeoutId) {
@@ -1239,18 +1286,26 @@ function createBot() {
 
     bot.loadPlugin(pathfinder);
 
+    // Handle errors from the lower-level Minecraft protocol client/socket.
+    // Mineflayer's high-level "error" event does not cover every stream error.
+    const protocolClient = bot._client;
+    if (protocolClient && typeof protocolClient.on === "function") {
+      protocolClient.on("error", (err) => {
+        recoverNetworkConnection(err, "Protocol client error");
+      });
+      if (protocolClient.socket && typeof protocolClient.socket.on === "function") {
+        protocolClient.socket.on("error", (err) => {
+          recoverNetworkConnection(err, "Socket error");
+        });
+      }
+    }
+
     // FIX: connection timeout - end the old bot before reconnecting to avoid ghost bots
     clearBotTimeouts();
     connectionTimeoutId = setTimeout(() => {
       if (!botState.connected) {
         addLog("[Bot] Connection timeout - no spawn received");
-        try {
-          bot.removeAllListeners();
-          bot.end();
-        } catch (e) {
-          /* ignore */
-        }
-        bot = null;
+        disposeCurrentBot("Connection timeout");
         scheduleReconnect();
       }
     }, 150000); // 150s - Aternos servers can take 90-120s to finish spawning a player
@@ -1373,7 +1428,10 @@ function createBot() {
       const msg = err.message || "";
       addLog(`[Bot] Error: ${msg}`);
       botState.errors.push({ type: "error", message: msg, time: Date.now() });
-      // Don't reconnect on error - let 'end' event handle it
+      if (/ECONNRESET|EPIPE|ETIMEDOUT|write after end|socket/i.test(msg)) {
+        recoverNetworkConnection(err, "Mineflayer bot error");
+      }
+      // Other disconnects are handled by the "end" event.
     });
   } catch (err) {
     addLog(`[Bot] Failed to create bot: ${err.message}`);
@@ -2017,32 +2075,16 @@ process.on("uncaughtException", (err) => {
     msg.includes("This socket has been ended");
 
   if (isNetworkError) {
-    addLog("[FATAL] Known network/protocol error - recovering gracefully...");
+    addLog("[FATAL] Known network/protocol error - disposing failed socket and reconnecting...");
+    recoverNetworkConnection(err, "Uncaught network exception");
+    return;
   }
 
-  // ALWAYS recover — bot must never stay disconnected
-  clearAllIntervals();
-  botState.connected = false;
-
-  // FIX: reset isReconnecting if it was stuck, then schedule reconnect
-  if (isReconnecting) {
-    addLog(
-      "[FATAL] isReconnecting was stuck - resetting before crash recovery",
-    );
-    isReconnecting = false;
-    // BUG FIX: was referencing non-existent 'reconnectTimeout' — correct name is 'reconnectTimeoutId'
-    if (reconnectTimeoutId) {
-      clearTimeout(reconnectTimeoutId);
-      reconnectTimeoutId = null;
-    }
-  }
-
-  setTimeout(
-    () => {
-      scheduleReconnect();
-    },
-    isNetworkError ? 5000 : 10000,
-  );
+  // A non-network uncaught exception is not safe to ignore. Let the host
+  // restart the process rather than continuing in an unknown state.
+  addLog("[FATAL] Non-network uncaught exception; exiting for a clean host restart.");
+  process.exitCode = 1;
+  setTimeout(() => process.exit(1), 1000);
 });
 
 process.on("unhandledRejection", (reason) => {
@@ -2061,15 +2103,8 @@ process.on("unhandledRejection", (reason) => {
     msg.includes("timed out") ||
     msg.includes("PartialReadError");
 
-  if (isNetworkError && !isReconnecting) {
-    addLog("[FATAL] Network rejection — triggering reconnect...");
-    clearAllIntervals();
-    botState.connected = false;
-    if (bot) {
-      try { bot.end(); } catch (_) {}
-      bot = null;
-    }
-    scheduleReconnect();
+  if (isNetworkError) {
+    recoverNetworkConnection(reason, "Unhandled network rejection");
   }
 });
 
