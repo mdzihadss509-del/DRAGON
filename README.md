@@ -24,9 +24,6 @@ Dashboard: `http://localhost:5000`
 
 The dashboard is protected with HTTP Basic Authentication. Use any username and the `DASHBOARD_PASSWORD` value as the password. The dashboard refuses access if the environment variable is missing.
 
-## Run 24/7 on Oracle Cloud
-See [deploy/oracle-cloud.md](deploy/oracle-cloud.md) for the Ubuntu + systemd steps.
-
 ## Notes
 - The bot starts when the Node.js process starts.
 - The dashboard has status, logs, and bot controls.
