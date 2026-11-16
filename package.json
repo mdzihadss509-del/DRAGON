@@ -13,7 +13,7 @@
     "express": "^4.18.1",
     "mineflayer": "npm:@wp2508/mineflayer@^4.42.8",
     "mineflayer-pathfinder": "^2.1.1",
-    "@wp2508/minecraft-data": "^3.111.8"
+    "minecraft-data": "npm:@wp2508/minecraft-data@^3.111.8"
   },
   "engines": {
     "node": ">=22"
