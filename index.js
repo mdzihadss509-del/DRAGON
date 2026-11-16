@@ -2,6 +2,7 @@
 
 const { addLog, getLogs } = require("./logger");
 const mineflayer = require("mineflayer");
+const minecraftData = require("@wp2508/minecraft-data");
 const { Movements, pathfinder, goals } = require("mineflayer-pathfinder");
 const { GoalBlock } = goals;
 const config = require("./settings.json");
@@ -25,6 +26,7 @@ let botState = {
   startTime: Date.now(),
   errors: [],
   wasThrottled: false,
+  sessionConflict: false,
 };
 
 // Health check endpoint for monitoring
@@ -996,12 +998,7 @@ app.post("/stop", (req, res) => {
   isReconnecting = false;
 
   if (bot) {
-    const oldBot = bot;
-    bot = null;
-    try {
-      oldBot.removeAllListeners();
-      oldBot.end();
-    } catch (_) {}
+    disposeCurrentBot("Dashboard stop");
   }
 
   clearAllIntervals();
@@ -1190,7 +1187,7 @@ function recoverNetworkConnection(error, source) {
     networkRecoveryPending = false;
     isReconnecting = false;
     scheduleReconnect();
-  }, 3000);
+  }, 10000);
 }
 
 function clearBotTimeouts() {
@@ -1221,6 +1218,13 @@ function addInterval(callback, delay) {
 }
 
 function getReconnectDelay() {
+  if (botState.sessionConflict) {
+    botState.sessionConflict = false;
+    const sessionDelay = 30000 + Math.floor(Math.random() * 10000);
+    addLog(`[Bot] Previous session may still be active - waiting ${sessionDelay / 1000}s before retry`);
+    return sessionDelay;
+  }
+
   if (botState.wasThrottled) {
     botState.wasThrottled = false;
     const throttleDelay = 60000 + Math.floor(Math.random() * 60000);
@@ -1255,13 +1259,7 @@ function createBot() {
   // Cleanup previous bot properly to avoid ghost bots
   if (bot) {
     clearAllIntervals();
-    try {
-      bot.removeAllListeners();
-      bot.end();
-    } catch (e) {
-      addLog("[Cleanup] Error ending previous bot:", e.message);
-    }
-    bot = null;
+    disposeCurrentBot("Replacing previous bot");
   }
 
   addLog(`[Bot] Creating bot instance...`);
@@ -1285,7 +1283,11 @@ function createBot() {
       checkTimeoutInterval: 600000,
     });
 
-    bot.loadPlugin(pathfinder);
+    const usePathfinder = Boolean(
+      (config.position && config.position.enabled) ||
+      (config.movement && config.movement.enabled !== false),
+    );
+    if (usePathfinder) bot.loadPlugin(pathfinder);
 
     // Handle errors from the lower-level Minecraft protocol client/socket.
     // Mineflayer's high-level "error" event does not cover every stream error.
@@ -1339,8 +1341,12 @@ function createBot() {
       }
 
       // FIX: use bot.version (auto-detected) instead of config value so minecraft-data always matches
-      const mcData = require("minecraft-data")(bot.version);
-      const defaultMove = new Movements(bot, mcData);
+      const usePathfinder = Boolean(
+        (config.position && config.position.enabled) ||
+        (config.movement && config.movement.enabled !== false),
+      );
+      const mcData = minecraftData(bot.version);
+      const defaultMove = usePathfinder ? new Movements(bot, mcData) : null;
       defaultMove.allowFreeMotion = false;
       defaultMove.canDig = false;
       defaultMove.liquidCost = 1000;
@@ -1382,6 +1388,10 @@ function createBot() {
       clearAllIntervals();
 
       const reasonStr = String(kickReason).toLowerCase();
+      if (reasonStr.includes("duplicate_login") || reasonStr.includes("duplicate login")) {
+        botState.sessionConflict = true;
+        addLog("[Bot] Duplicate login detected - delaying reconnect to let the old session expire");
+      }
       if (
         reasonStr.includes("throttl") ||
         reasonStr.includes("wait before reconnect") ||
