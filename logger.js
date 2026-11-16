@@ -1,18 +1,11 @@
-const logs = [];
+"use strict";
 
-function addLog(message) {
-  const time = new Date().toLocaleTimeString();
-  const formatted = `[${time}] ${message}`;
-
-  console.log(formatted); // still goes to Render logs
-
-  logs.push(formatted);
-
-  if (logs.length > 300) logs.shift();
-}
+// Logging disabled: no log history is kept in memory or written to disk.
+// Keep these exports so the bot's existing code remains compatible.
+function addLog() {}
 
 function getLogs() {
-  return logs;
+  return [];
 }
 
 module.exports = { addLog, getLogs };
