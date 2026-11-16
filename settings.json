@@ -3,7 +3,7 @@
   "bot-account": {
     "username": "Hades",
     "password": "",
-    "type": "online"
+    "type": "offline"
   },
   "server": {
     "ip": "bfh.mcsh.io",
