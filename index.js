@@ -1347,10 +1347,12 @@ function createBot() {
       );
       const mcData = minecraftData(bot.version);
       const defaultMove = usePathfinder ? new Movements(bot, mcData) : null;
-      defaultMove.allowFreeMotion = false;
-      defaultMove.canDig = false;
-      defaultMove.liquidCost = 1000;
-      defaultMove.fallDamageCost = 1000;
+      if (defaultMove) {
+        defaultMove.allowFreeMotion = false;
+        defaultMove.canDig = false;
+        defaultMove.liquidCost = 1000;
+        defaultMove.fallDamageCost = 1000;
+      }
 
       initializeModules(bot, mcData, defaultMove);
 
